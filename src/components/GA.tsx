@@ -14,7 +14,7 @@ export function GA() {
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'G-G5SLVTDBC6');
+          gtag('config', 'G-WC1ENLHLLT');
         `}
       </Script>
     </>
