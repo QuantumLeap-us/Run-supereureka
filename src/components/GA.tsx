@@ -7,7 +7,7 @@ export function GA() {
     <>
       <Script
         async
-        src="https://www.googletagmanager.com/gtag/js?id=G-G5SLVTDBC6"
+        src="https://www.googletagmanager.com/gtag/js?id=G-WC1ENLHLLT"
       />
       <Script id="ga">
         {`
