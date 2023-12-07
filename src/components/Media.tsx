@@ -2,19 +2,7 @@ import { Box } from "@mui/material";
 import Link from "next/link";
 
 export default function Media() {
-  const mediaList = [
-    {
-      title: "代码",
-      linkText: "Github",
-      link: "https://github.com/QuantumLeap-us/super-eureka",
-    },
-    {
-      title: "开发者",
-      linkText: "@XealDigital",
-      link: "https://twitter.com/XealDigital",
-    },
-   
-  ];
+  const mediaList = [];
 
   return (
     <div className=" py-4">
@@ -39,10 +27,6 @@ export default function Media() {
             </div>
           );
         })}
-      </div>
-
-      <div className=" text-center">
-        打赏地址☕️: 0x891b2CD306E519b0Bc372906f0CEdb399B09AFc0
       </div>
     </div>
   );
