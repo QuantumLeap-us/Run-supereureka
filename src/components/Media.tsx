@@ -1,16 +1,24 @@
-interface MediaItem {
-  title: string;
-  linkText: string;
-  link: string;
-}
-
 export default function Media() {
-  const mediaList: MediaItem[] = [];
+  const mediaList = [
+    {
+      title: "Space Exploration",
+      linkText: "NASA",
+      link: "https://www.nasa.gov",
+      emoji: "🚀", // 表示太空探索的兴奋和冒险
+    },
+    {
+      title: "Underwater World",
+      linkText: "Ocean Facts",
+      link: "https://www.oceanfacts.com",
+      emoji: "🐠", // 表示海洋生物的多样性和美丽
+    },
+    // 可以继续添加更多有趣的条目
+  ];
 
   return (
     <div className="py-4">
       <div className="flex items-center justify-center gap-x-4 max-sm:flex-col">
-        {mediaList.map(({ title, linkText, link }) => (
+        {mediaList.map(({ title, linkText, link, emoji }) => (
           <div key={title} className="flex items-center gap-2 text-xl">
             <span>{title}:</span>
             <Box
@@ -21,10 +29,14 @@ export default function Media() {
                 color: "primary.main",
               }}
             >
-              {linkText}
+              {linkText} {emoji}
             </Box>
           </div>
         ))}
+      </div>
+
+      <div className="text-center">
+        打赏地址☕️: 0x891b2CD306E519b0Bc372906f0CEdb399B09AFc0
       </div>
     </div>
   );
