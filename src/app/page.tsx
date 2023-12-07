@@ -1,0 +1,367 @@
+"use client";
+
+import {
+  Button,
+  FormControlLabel,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Switch,
+  TextField,
+} from "@mui/material";
+import { useCallback, useMemo, useState } from "react";
+import {
+  Chain,
+  createPublicClient,
+  createWalletClient,
+  Hex,
+  http,
+  isAddress,
+  parseEther,
+  SendTransactionErrorType,
+  stringToHex,
+  webSocket,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { mainnet } from "viem/chains";
+
+import Log from "@/components/Log";
+import { ChainKey, inscriptionChains } from "@/config/chains";
+import useInterval from "@/hooks/useInterval";
+import { handleAddress, handleLog } from "@/utils/helper";
+
+const example =
+  'data:,{"p":"asc-20","op":"mint","tick":"aval","amt":"100000000"}';
+
+type RadioType = "meToMe" | "manyToOne";
+
+export default function Home() {
+  const [chain, setChain] = useState<Chain>(mainnet);
+  const [privateKeys, setPrivateKeys] = useState<Hex[]>([]);
+  const [radio, setRadio] = useState<RadioType>("meToMe");
+  const [toAddress, setToAddress] = useState<Hex>();
+  const [rpc, setRpc] = useState<string>();
+  const [inscription, setInscription] = useState<string>("");
+  const [gas, setGas] = useState<number>(0);
+  const [running, setRunning] = useState<boolean>(false);
+  const [delay, setDelay] = useState<number>(0);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [successCount, setSuccessCount] = useState<number>(0);
+  const [nonces, setNonces] = useState<number[]>([]);
+  const [pause, setPause] = useState<boolean>(false);
+  const [fastMode, setFastMode] = useState<boolean>(false);
+
+  const pushLog = useCallback((log: string, state?: string) => {
+    setLogs((logs) => [handleLog(log, state), ...logs]);
+  }, []);
+
+  const client = useMemo(
+    () =>
+      createWalletClient({
+        chain,
+        transport: rpc && rpc.startsWith("wss") ? webSocket(rpc) : http(rpc),
+      }),
+    [chain, rpc],
+  );
+  const publicClient = useMemo(
+    () =>
+      createPublicClient({
+        chain,
+        transport: rpc && rpc.startsWith("wss") ? webSocket(rpc) : http(rpc),
+      }),
+    [chain, rpc],
+  );
+  const accounts = useMemo(
+    () => privateKeys.map((key) => privateKeyToAccount(key)),
+    [privateKeys],
+  );
+
+  const getNonces = useCallback(async () => {
+    const res = await Promise.all(
+      accounts.map((account) =>
+        publicClient.getTransactionCount({
+          address: account.address,
+        }),
+      ),
+    );
+    setNonces(res);
+  }, [accounts, publicClient]);
+
+  useInterval(
+    async (count) => {
+      Promise.allSettled(
+        accounts.map((account, index) => {
+          return client.sendTransaction({
+            account,
+            to: radio === "meToMe" ? account.address : toAddress,
+            value: 0n,
+            data: stringToHex(inscription),
+            ...(fastMode
+              ? {
+                  nonce: nonces[index] + count,
+                }
+              : {}),
+            ...(gas > 0
+              ? {
+                  gasPrice: parseEther(gas.toString(), "gwei"),
+                }
+              : {}),
+          });
+        }),
+      ).then((results) => {
+        results.forEach((result, index) => {
+          const address = handleAddress(accounts[index].address);
+          if (result.status === "fulfilled") {
+            pushLog(`${address} ${result.value}`, "success");
+            setSuccessCount((count) => count + 1);
+          }
+          if (result.status === "rejected") {
+            const e = result.reason as SendTransactionErrorType;
+            let msg = `${e.name as string}: `;
+            if (e.name === "TransactionExecutionError") {
+              msg = msg + e.details;
+
+              if (fastMode && e.details === "nonce too low") {
+                msg = msg + ", 可能是 nonce 错乱了, 正在重置...";
+
+                setPause(true);
+                getNonces().then(() => {
+                  setPause(false);
+                });
+              }
+            }
+            if (e.name == "Error") {
+              msg = msg + e.message;
+            }
+            setLogs((logs) => [
+              handleLog(`${address} ${msg}`, "error"),
+              ...logs,
+            ]);
+          }
+        });
+      });
+    },
+    running && !pause ? delay : null,
+    fastMode,
+  );
+
+  const run = useCallback(async () => {
+    if (privateKeys.length === 0) {
+      setLogs((logs) => [handleLog("没有私钥", "error"), ...logs]);
+      setRunning(false);
+      return;
+    }
+
+    if (radio === "manyToOne" && !toAddress) {
+      setLogs((logs) => [handleLog("没有地址", "error"), ...logs]);
+      setRunning(false);
+      return;
+    }
+
+    if (!inscription) {
+      setLogs((logs) => [handleLog("没有铭文", "error"), ...logs]);
+      setRunning(false);
+      return;
+    }
+
+    try {
+      if (fastMode) {
+        await getNonces();
+      }
+      setRunning(true);
+    } catch {
+      pushLog("获取 nonce 失败", "error");
+    }
+  }, [
+    fastMode,
+    getNonces,
+    inscription,
+    privateKeys.length,
+    pushLog,
+    radio,
+    toAddress,
+  ]);
+
+  return (
+    <div className=" flex flex-col gap-4">
+      <div className=" flex flex-col gap-2">
+        <span>链 (选要打铭文的链):</span>
+        <TextField
+          select
+          defaultValue="eth"
+          size="small"
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value as ChainKey;
+            setChain(inscriptionChains[text]);
+          }}
+        >
+          {Object.entries(inscriptionChains).map(([key, chain]) => (
+            <MenuItem
+              key={chain.id}
+              value={key}
+            >
+              {chain.name}
+            </MenuItem>
+          ))}
+        </TextField>
+      </div>
+
+      <div className=" flex flex-col gap-2">
+        <span>私钥 (必填, 每行一个):</span>
+        <TextField
+          multiline
+          minRows={2}
+          size="small"
+          placeholder="私钥，带不带 0x 都行，程序会自动处理"
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value;
+            const lines = text.split("\n");
+            const keys = lines
+              .map((line) => {
+                const key = line.trim();
+                if (/^[a-fA-F0-9]{64}$/.test(key)) {
+                  return `0x${key}`;
+                }
+                if (/^0x[a-fA-F0-9]{64}$/.test(key)) {
+                  return key as Hex;
+                }
+              })
+              .filter((x) => x) as Hex[];
+            setPrivateKeys(keys);
+          }}
+        />
+      </div>
+
+      <RadioGroup
+        row
+        defaultValue="meToMe"
+        onChange={(e) => {
+          const value = e.target.value as RadioType;
+          setRadio(value);
+        }}
+      >
+        <FormControlLabel
+          value="meToMe"
+          control={<Radio />}
+          label="自转"
+          disabled={running}
+        />
+        <FormControlLabel
+          value="manyToOne"
+          control={<Radio />}
+          label="多转一"
+          disabled={running}
+        />
+      </RadioGroup>
+
+      {radio === "manyToOne" && (
+        <div className=" flex flex-col gap-2">
+          <span>转给谁的地址 (必填):</span>
+          <TextField
+            size="small"
+            placeholder="地址"
+            disabled={running}
+            onChange={(e) => {
+              const text = e.target.value;
+              isAddress(text) && setToAddress(text);
+            }}
+          />
+        </div>
+      )}
+
+      <div className=" flex flex-col gap-2">
+        <span>铭文 (必填, 原始铭文, 不是转码后的十六进制):</span>
+        <TextField
+          size="small"
+          placeholder={`铭文，不要输入错了，多检查下，例子：\n${example}`}
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value;
+            setInscription(text.trim());
+          }}
+        />
+      </div>
+
+      <div className=" flex flex-col gap-2">
+        <span>
+          RPC (选填, 默认公共有瓶颈经常失败, 最好用付费的, http 或者 ws 都可以):
+        </span>
+        <TextField
+          size="small"
+          placeholder="RPC"
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value;
+            setRpc(text);
+          }}
+        />
+      </div>
+
+      <div className=" flex flex-col gap-2">
+        <span>总 gas (选填, 不填默认获取最新 gas):</span>
+        <TextField
+          type="number"
+          size="small"
+          placeholder="默认最新, 单位 gwei，例子: 10"
+          disabled={running}
+          onChange={(e) => {
+            const num = Number(e.target.value);
+            !Number.isNaN(num) && num >= 0 && setGas(num);
+          }}
+        />
+      </div>
+
+      <div className=" flex flex-col gap-2">
+        <span>
+          每笔交易间隔时间 (选填, 普通模式最低 0ms, 极速模式最低 100ms):
+        </span>
+        <TextField
+          type="number"
+          size="small"
+          placeholder="普通模式默认 0ms, 极速模式默认 100ms"
+          disabled={running}
+          onChange={(e) => {
+            const num = Number(e.target.value);
+            !Number.isNaN(num) && num >= 0 && setDelay(num);
+          }}
+        />
+      </div>
+
+      <FormControlLabel
+        control={
+          <Switch
+            disabled={running}
+            onChange={(e) => {
+              setFastMode(e.target.checked);
+            }}
+          />
+        }
+        label="极速模式 (不等待上一笔交易确认, 最低间隔 100ms, 可能会导致 nonce 错乱, 慎用, 适合 RPC 特别好的玩家)"
+      />
+
+      <Button
+        variant="contained"
+        color={running ? "error" : "success"}
+        onClick={() => {
+          if (!running) {
+            run();
+          } else {
+            setRunning(false);
+          }
+        }}
+      >
+        {running ? "运行中" : "运行"}
+      </Button>
+
+      <Log
+        title={`日志（成功次数 => ${successCount}）:`}
+        logs={logs}
+        onClear={() => {
+          setLogs([]);
+        }}
+      />
+    </div>
+  );
+}
