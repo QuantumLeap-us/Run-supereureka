@@ -6,13 +6,13 @@ export default function Media() {
       title: "Space Exploration",
       linkText: "NASA",
       link: "https://www.nasa.gov",
-      emoji: "🚀", // 表示太空探索的兴奋和冒险
+      emoji: "🚀", 
     },
     {
-      title: "Underwater World",
-      linkText: "Ocean Facts",
-      link: "https://www.oceanfacts.com",
-      emoji: "🐠", // 表示海洋生物的多样性和美丽
+      title: "网络监控",
+      linkText: "CYBERTHREAT",
+      link: "https://cybermap.kaspersky.com/cn",
+      emoji: "💣", 
     },
     // 可以继续添加更多有趣的条目
   ];
