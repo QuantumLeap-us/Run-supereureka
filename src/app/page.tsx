@@ -109,40 +109,26 @@ export default function Home() {
           });
         }),
       );
-        results.forEach((result, index) => {
-          const address = handleAddress(accounts[index].address);
-          if (result.status === "fulfilled") {
-            pushLog(`${address} ${result.value}`, "success");
-            setSuccessCount((count) => count + 1);
+       results.forEach((result, index) => {
+        const address = handleAddress(accounts[index].address);
+        if (result.status === "fulfilled") {
+          pushLog(`${address} ${result.value}`, "success");
+          setSuccessCount((count) => count + 1);
+        }
+        if (result.status === "rejected") {
+          const e = result.reason as SendTransactionErrorType;
+          let msg = `${e.name as string}: `;
+          if (e.name === "TransactionExecutionError") {
+            msg = msg + e.details;
           }
-          if (result.status === "rejected") {
-            const e = result.reason as SendTransactionErrorType;
-            let msg = `${e.name as string}: `;
-            if (e.name === "TransactionExecutionError") {
-              msg = msg + e.details;
-
-              if (fastMode && e.details === "nonce too low") {
-                msg = msg + ", 可能是 nonce 错乱了, 正在重置...";
-
-                setPause(true);
-                getNonces().then(() => {
-                  setPause(false);
-                });
-              }
-            }
-            if (e.name == "Error") {
-              msg = msg + e.message;
-            }
-            setLogs((logs) => [
-              handleLog(`${address} ${msg}`, "error"),
-              ...logs,
-            ]);
+          if (e.name == "Error") {
+            msg = msg + e.message;
           }
-        });
+          setLogs((logs) => [handleLog(`${address} ${msg}`, "error"), ...logs]);
+        }
       });
     },
-    running && !pause ? delay : null,
-    fastMode,
+    running ? delay : null,
   );
 
   const run = useCallback(async () => {
