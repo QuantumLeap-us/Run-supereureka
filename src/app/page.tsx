@@ -89,9 +89,9 @@ export default function Home() {
   }, [accounts, publicClient]);
 
   useInterval(
-    async (count) => {
-      Promise.allSettled(
-        accounts.map((account, index) => {
+    async () => {
+      const results = await Promise.allSettled(
+        accounts.map((account) => {
           return client.sendTransaction({
             account,
             to: radio === "meToMe" ? account.address : toAddress,
