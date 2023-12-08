@@ -34,6 +34,7 @@ const example =
   'data:,{"p":"asc-20","op":"mint","tick":"aval","amt":"100000000"}';
 
 type RadioType = "meToMe" | "manyToOne";
+type GasRadio = "all" | "tip"; // 新增的类型定义
 
 export default function Home() {
   const [chain, setChain] = useState<Chain>(mainnet);
@@ -50,6 +51,7 @@ export default function Home() {
   const [nonces, setNonces] = useState<number[]>([]);
   const [pause, setPause] = useState<boolean>(false);
   const [fastMode, setFastMode] = useState<boolean>(false);
+  const [gasRadio, setGasRadio] = useState<GasRadio>("tip"); // 新增的state
 
   const pushLog = useCallback((log: string, state?: string) => {
     setLogs((logs) => [handleLog(log, state), ...logs]);
@@ -102,8 +104,12 @@ export default function Home() {
                 }
               : {}),
             ...(gas > 0
+              ? gasRadio === "all"
               ? {
-                  gasPrice: parseEther(gas.toString(), "gwei"),
+                    gasPrice: parseEther(gas.toString(), "gwei"), // 总 gas
+                  }
+                : {
+                    maxPriorityFeePerGas: parseEther(gas.toString(), "gwei"), // 额外矿工小费
                 }
               : {}),
           });
@@ -236,22 +242,22 @@ export default function Home() {
 
       <RadioGroup
         row
-        defaultValue="meToMe"
+        defaultValue="tip"
         onChange={(e) => {
-          const value = e.target.value as RadioType;
-          setRadio(value);
+          const value = e.target.value as GasRadio;
+          setGasRadio(value);
         }}
       >
         <FormControlLabel
-          value="meToMe"
+          value="tip"
           control={<Radio />}
-          label="自转"
+          label="额外矿工小费"
           disabled={running}
         />
         <FormControlLabel
-          value="manyToOne"
+          value="all"
           control={<Radio />}
-          label="多转一"
+          label="总 gas"
           disabled={running}
         />
       </RadioGroup>
