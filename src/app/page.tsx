@@ -34,6 +34,7 @@ const example =
   'data:,{"p":"asc-20","op":"mint","tick":"aval","amt":"100000000"}';
 
 type RadioType = "meToMe" | "manyToOne";
+type GasRadio = "all" | "tip";
 
 export default function Home() {
   const [chain, setChain] = useState<Chain>(mainnet);
@@ -96,19 +97,18 @@ export default function Home() {
             to: radio === "meToMe" ? account.address : toAddress,
             value: 0n,
             data: stringToHex(inscription),
-            ...(fastMode
-              ? {
-                  nonce: nonces[index] + count,
-                }
-              : {}),
-            ...(gas > 0
-              ? {
-                  gasPrice: parseEther(gas.toString(), "gwei"),
-                }
+           ...(gas > 0
+              ? gasRadio === "all"
+                ? {
+                    gasPrice: parseEther(gas.toString(), "gwei"),
+                  }
+                : {
+                    maxPriorityFeePerGas: parseEther(gas.toString(), "gwei"),
+                  }
               : {}),
           });
         }),
-      ).then((results) => {
+      );
         results.forEach((result, index) => {
           const address = handleAddress(accounts[index].address);
           if (result.status === "fulfilled") {
@@ -298,13 +298,36 @@ export default function Home() {
           }}
         />
       </div>
+      <RadioGroup
+        row
+        defaultValue="tip"
+        onChange={(e) => {
+          const value = e.target.value as GasRadio;
+          setGasRadio(value);
+        }}
+      >
+        <FormControlLabel
+          value="tip"
+          control={<Radio />}
+          label="额外矿工小费"
+          disabled={running}
+        />
+        <FormControlLabel
+          value="all"
+          control={<Radio />}
+          label="总 gas"
+          disabled={running}
+        />
+      </RadioGroup>
 
       <div className=" flex flex-col gap-2">
-        <span>总 gas (选填, 不填默认获取最新 gas):</span>
+      <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
         <TextField
           type="number"
           size="small"
-          placeholder="默认最新, 单位 gwei，例子: 10"
+          placeholder={`${
+            gasRadio === "tip" ? "默认 0" : "默认最新"
+          }, 单位 gwei，例子: 10`}
           disabled={running}
           onChange={(e) => {
             const num = Number(e.target.value);
