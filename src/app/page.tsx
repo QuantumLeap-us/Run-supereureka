@@ -34,7 +34,6 @@ const example =
   'data:,{"p":"asc-20","op":"mint","tick":"aval","amt":"100000000"}';
 
 type RadioType = "meToMe" | "manyToOne";
-type GasRadio = "all" | "tip";
 
 export default function Home() {
   const [chain, setChain] = useState<Chain>(mainnet);
@@ -51,7 +50,6 @@ export default function Home() {
   const [nonces, setNonces] = useState<number[]>([]);
   const [pause, setPause] = useState<boolean>(false);
   const [fastMode, setFastMode] = useState<boolean>(false);
-  const [gasRadio, setGasRadio] = useState<GasRadio>("tip");
 
   const pushLog = useCallback((log: string, state?: string) => {
     setLogs((logs) => [handleLog(log, state), ...logs]);
@@ -65,7 +63,6 @@ export default function Home() {
       }),
     [chain, rpc],
   );
-
   const publicClient = useMemo(
     () =>
       createPublicClient({
@@ -74,7 +71,6 @@ export default function Home() {
       }),
     [chain, rpc],
   );
-
   const accounts = useMemo(
     () => privateKeys.map((key) => privateKeyToAccount(key)),
     [privateKeys],
@@ -107,9 +103,8 @@ export default function Home() {
               : {}),
             ...(gas > 0
               ? {
-                    gasPrice: gasRadio === "all" ? parseEther(gas.toString(), "gwei") : undefined,
-                    maxPriorityFeePerGas: gasRadio === "tip" ? parseEther(gas.toString(), "gwei") : undefined,
-            }
+                  gasPrice: parseEther(gas.toString(), "gwei"),
+                }
               : {}),
           });
         }),
@@ -124,10 +119,10 @@ export default function Home() {
             const e = result.reason as SendTransactionErrorType;
             let msg = `${e.name as string}: `;
             if (e.name === "TransactionExecutionError") {
-              msg += e.details;
+              msg = msg + e.details;
 
               if (fastMode && e.details === "nonce too low") {
-                msg += ", 可能是 nonce 错乱了, 正在重置...";
+                msg = msg + ", 可能是 nonce 错乱了, 正在重置...";
 
                 setPause(true);
                 getNonces().then(() => {
@@ -135,10 +130,13 @@ export default function Home() {
                 });
               }
             }
-            if (e.name === "Error") {
-              msg += e.message;
+            if (e.name == "Error") {
+              msg = msg + e.message;
             }
-            pushLog(msg, "error");
+            setLogs((logs) => [
+              handleLog(`${address} ${msg}`, "error"),
+              ...logs,
+            ]);
           }
         });
       });
@@ -147,34 +145,146 @@ export default function Home() {
     fastMode,
   );
 
-  const run = useCallback(() => {
+  const run = useCallback(async () => {
     if (privateKeys.length === 0) {
-      pushLog("没有私钥", "error");
+      setLogs((logs) => [handleLog("没有私钥", "error"), ...logs]);
       setRunning(false);
       return;
     }
 
     if (radio === "manyToOne" && !toAddress) {
-      pushLog("没有地址", "error");
+      setLogs((logs) => [handleLog("没有地址", "error"), ...logs]);
       setRunning(false);
       return;
     }
 
     if (!inscription) {
-      pushLog("没有铭文", "error");
+      setLogs((logs) => [handleLog("没有铭文", "error"), ...logs]);
       setRunning(false);
       return;
     }
 
-    setRunning(true);
-  }, [privateKeys.length, toAddress, inscription, radio]);
+    try {
+      if (fastMode) {
+        await getNonces();
+      }
+      setRunning(true);
+    } catch {
+      pushLog("获取 nonce 失败", "error");
+    }
+  }, [
+    fastMode,
+    getNonces,
+    inscription,
+    privateKeys.length,
+    pushLog,
+    radio,
+    toAddress,
+  ]);
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* 省略了其他UI部分，应按需添加 */}
-      
-      {/* RPC输入框 */}
-      <div className="flex flex-col gap-2">
+    <div className=" flex flex-col gap-4">
+      <div className=" flex flex-col gap-2">
+        <span>链 (选要打铭文的链):</span>
+        <TextField
+          select
+          defaultValue="eth"
+          size="small"
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value as ChainKey;
+            setChain(inscriptionChains[text]);
+          }}
+        >
+          {Object.entries(inscriptionChains).map(([key, chain]) => (
+            <MenuItem
+              key={chain.id}
+              value={key}
+            >
+              {chain.name}
+            </MenuItem>
+          ))}
+        </TextField>
+      </div>
+
+      <div className=" flex flex-col gap-2">
+        <span>私钥 (必填, 每行一个):</span>
+        <TextField
+          multiline
+          minRows={2}
+          size="small"
+          placeholder="私钥，带不带 0x 都行，程序会自动处理"
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value;
+            const lines = text.split("\n");
+            const keys = lines
+              .map((line) => {
+                const key = line.trim();
+                if (/^[a-fA-F0-9]{64}$/.test(key)) {
+                  return `0x${key}`;
+                }
+                if (/^0x[a-fA-F0-9]{64}$/.test(key)) {
+                  return key as Hex;
+                }
+              })
+              .filter((x) => x) as Hex[];
+            setPrivateKeys(keys);
+          }}
+        />
+      </div>
+
+      <RadioGroup
+        row
+        defaultValue="meToMe"
+        onChange={(e) => {
+          const value = e.target.value as RadioType;
+          setRadio(value);
+        }}
+      >
+        <FormControlLabel
+          value="meToMe"
+          control={<Radio />}
+          label="自转"
+          disabled={running}
+        />
+        <FormControlLabel
+          value="manyToOne"
+          control={<Radio />}
+          label="多转一"
+          disabled={running}
+        />
+      </RadioGroup>
+
+      {radio === "manyToOne" && (
+        <div className=" flex flex-col gap-2">
+          <span>转给谁的地址 (必填):</span>
+          <TextField
+            size="small"
+            placeholder="地址"
+            disabled={running}
+            onChange={(e) => {
+              const text = e.target.value;
+              isAddress(text) && setToAddress(text);
+            }}
+          />
+        </div>
+      )}
+
+      <div className=" flex flex-col gap-2">
+        <span>铭文 (必填, 原始铭文, 不是转码后的十六进制):</span>
+        <TextField
+          size="small"
+          placeholder={`铭文，不要输入错了，多检查下，例子：\n${example}`}
+          disabled={running}
+          onChange={(e) => {
+            const text = e.target.value;
+            setInscription(text.trim());
+          }}
+        />
+      </div>
+
+      <div className=" flex flex-col gap-2">
         <span>
           RPC (选填, 默认公共有瓶颈经常失败, 最好用付费的, http 或者 ws 都可以):
         </span>
@@ -183,42 +293,18 @@ export default function Home() {
           placeholder="RPC"
           disabled={running}
           onChange={(e) => {
-            const text = e.target.value.trim();
+            const text = e.target.value;
             setRpc(text);
           }}
         />
       </div>
-      
-      {/* “额外矿工小费”和“总 gas”选择 */}
-      <RadioGroup
-        row
-        value={gasRadio}
-        onChange={(e) => {
-          const value = e.target.value as GasRadio;
-          setGasRadio(value);
-        }}
-      >
-        <FormControlLabel
-          value="tip"
-          control={<Radio />}
-          label="额外矿工小费"
-          disabled={running}
-        />
-        <FormControlLabel
-          value="all"
-          control={<Radio />}
-          label="总 gas"
-          disabled={running}
-        />
-      </RadioGroup>
 
-      {/* “额外矿工小费”和“总 gas”输入框 */}
-      <div className="flex flex-col gap-2">
-        <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
+      <div className=" flex flex-col gap-2">
+        <span>总 gas (选填, 不填默认获取最新 gas):</span>
         <TextField
           type="number"
           size="small"
-          placeholder={`${gasRadio === "tip" ? "默认 0" : "默认最新"}, 单位 gwei，例子: 10`}
+          placeholder="默认最新, 单位 gwei，例子: 10"
           disabled={running}
           onChange={(e) => {
             const num = Number(e.target.value);
@@ -227,22 +313,55 @@ export default function Home() {
         />
       </div>
 
-      {/* 运行按钮 */}
+      <div className=" flex flex-col gap-2">
+        <span>
+          每笔交易间隔时间 (选填, 普通模式最低 0ms, 极速模式最低 100ms):
+        </span>
+        <TextField
+          type="number"
+          size="small"
+          placeholder="普通模式默认 0ms, 极速模式默认 100ms"
+          disabled={running}
+          onChange={(e) => {
+            const num = Number(e.target.value);
+            !Number.isNaN(num) && num >= 0 && setDelay(num);
+          }}
+        />
+      </div>
+
+      <FormControlLabel
+        control={
+          <Switch
+            disabled={running}
+            onChange={(e) => {
+              setFastMode(e.target.checked);
+            }}
+          />
+        }
+        label="极速模式 (不等待上一笔交易确认, 最低间隔 100ms, 可能会导致 nonce 错乱, 慎用, 适合 RPC 特别好的玩家)"
+      />
+
       <Button
         variant="contained"
         color={running ? "error" : "success"}
-        onClick={run}
+        onClick={() => {
+          if (!running) {
+            run();
+          } else {
+            setRunning(false);
+          }
+        }}
       >
         {running ? "运行中" : "运行"}
       </Button>
 
-      {/* 日志组件 */}
       <Log
         title={`日志（成功次数 => ${successCount}）:`}
         logs={logs}
-        onClear={() => setLogs([])}
+        onClear={() => {
+          setLogs([]);
+        }}
       />
-
     </div>
   );
 }
