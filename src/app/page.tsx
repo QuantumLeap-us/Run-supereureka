@@ -109,7 +109,7 @@ export default function Home() {
               ? {
                     gasPrice: gasRadio === "all" ? parseEther(gas.toString(), "gwei") : undefined,
                     maxPriorityFeePerGas: gasRadio === "tip" ? parseEther(gas.toString(), "gwei") : undefined,
-                }
+            }
               : {}),
           });
         }),
