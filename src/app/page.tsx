@@ -51,6 +51,7 @@ export default function Home() {
   const [nonces, setNonces] = useState<number[]>([]);
   const [pause, setPause] = useState<boolean>(false);
   const [fastMode, setFastMode] = useState<boolean>(false);
+  const [gasRadio, setGasRadio] = useState<GasRadio>("tip");
 
   const pushLog = useCallback((log: string, state?: string) => {
     setLogs((logs) => [handleLog(log, state), ...logs]);
