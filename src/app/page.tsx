@@ -35,8 +35,6 @@ const example =
 
 type RadioType = "meToMe" | "manyToOne";
 
-type GasRadio = "all" | "tip";
-
 export default function Home() {
   const [chain, setChain] = useState<Chain>(mainnet);
   const [privateKeys, setPrivateKeys] = useState<Hex[]>([]);
@@ -60,8 +58,8 @@ export default function Home() {
   const client = useMemo(
     () =>
       createWalletClient({
-    chain,
-    transport: rpc && rpc.startsWith("wss") ? webSocket(rpc) : http(rpc),
+        chain,
+        transport: rpc && rpc.startsWith("wss") ? webSocket(rpc) : http(rpc),
       }),
     [chain, rpc],
   );
@@ -104,28 +102,24 @@ export default function Home() {
                 }
               : {}),
             ...(gas > 0
-              ? gasRadio === "all"
-                ? {
-                    gasPrice: parseEther(gas.toString(), "gwei"),
-                  }
-                : {
-                    maxPriorityFeePerGas: parseEther(gas.toString(), "gwei"),
-                  }
+              ? {
+                  gasPrice: parseEther(gas.toString(), "gwei"),
+                }
               : {}),
           });
         }),
       ).then((results) => {
-      results.forEach((result, index) => {
-        const address = handleAddress(accounts[index].address);
-        if (result.status === "fulfilled") {
-          pushLog(`${address} ${result.value}`, "success");
-          setSuccessCount((count) => count + 1);
-        }
-        if (result.status === "rejected") {
-          const e = result.reason as SendTransactionErrorType;
-          let msg = `${e.name as string}: `;
-          if (e.name === "TransactionExecutionError") {
-            msg = msg + e.details;
+        results.forEach((result, index) => {
+          const address = handleAddress(accounts[index].address);
+          if (result.status === "fulfilled") {
+            pushLog(`${address} ${result.value}`, "success");
+            setSuccessCount((count) => count + 1);
+          }
+          if (result.status === "rejected") {
+            const e = result.reason as SendTransactionErrorType;
+            let msg = `${e.name as string}: `;
+            if (e.name === "TransactionExecutionError") {
+              msg = msg + e.details;
 
               if (fastMode && e.details === "nonce too low") {
                 msg = msg + ", 可能是 nonce 错乱了, 正在重置...";
@@ -135,16 +129,16 @@ export default function Home() {
                   setPause(false);
                 });
               }
-          }
-          if (e.name == "Error") {
-            msg = msg + e.message;
-          }
+            }
+            if (e.name == "Error") {
+              msg = msg + e.message;
+            }
             setLogs((logs) => [
               handleLog(`${address} ${msg}`, "error"),
               ...logs,
             ]);
-        }
-      });
+          }
+        });
       });
     },
     running && !pause ? delay : null,
@@ -174,7 +168,7 @@ export default function Home() {
       if (fastMode) {
         await getNonces();
       }
-    setRunning(true);
+      setRunning(true);
     } catch {
       pushLog("获取 nonce 失败", "error");
     }
@@ -305,36 +299,12 @@ export default function Home() {
         />
       </div>
 
-      <RadioGroup
-        row
-        defaultValue="tip"
-        onChange={(e) => {
-          const value = e.target.value as GasRadio;
-          setGasRadio(value);
-        }}
-      >
-        <FormControlLabel
-          value="tip"
-          control={<Radio />}
-          label="额外矿工小费"
-          disabled={running}
-        />
-        <FormControlLabel
-          value="all"
-          control={<Radio />}
-          label="总 gas"
-          disabled={running}
-        />
-      </RadioGroup>
-
       <div className=" flex flex-col gap-2">
-        <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
+        <span>总 gas (选填, 不填默认获取最新 gas):</span>
         <TextField
           type="number"
           size="small"
-          placeholder={`${
-            gasRadio === "tip" ? "默认 0" : "默认最新"
-          }, 单位 gwei，例子: 10`}
+          placeholder="默认最新, 单位 gwei，例子: 10"
           disabled={running}
           onChange={(e) => {
             const num = Number(e.target.value);
