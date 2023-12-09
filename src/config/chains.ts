@@ -53,7 +53,7 @@ export const inscriptionChains = {
   arbitrum,
   zkSync,
   linea,
-  eos
+  eos,
   okc,
   fantom,
   opBNB,
