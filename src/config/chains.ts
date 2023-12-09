@@ -11,7 +11,6 @@ import {
   gnosis,
   linea,
   mainnet,
-  eos,
   okc，
   opBNB,
   optimism,
@@ -53,7 +52,6 @@ export const inscriptionChains = {
   arbitrum,
   zkSync,
   linea,
-  eos,
   okc,
   fantom,
   opBNB,
