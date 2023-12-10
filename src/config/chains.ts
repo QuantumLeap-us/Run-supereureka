@@ -44,6 +44,28 @@ export const shibarium = defineChain({
   },
 });
 
+export const ethw = defineChain({
+  id: 10001,
+  name: "ETHW-mainnet",
+  network: "ETHW-mainnet",
+  nativeCurrency: {
+    decimals: 18,
+    name: "ETHW",
+    symbol: "ETHW",
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://mainnet.ethereumpow.org"],
+    },
+    public: {
+      http: ["https://mainnet.ethereumpow.org"],
+    },
+  },
+  blockExplorers: {
+    default: { name: "Explorer", url: "https://mainnet.ethwscan.com" },
+  },
+});
+
 export const inscriptionChains = {
   eth: mainnet,
   bsc,
@@ -57,6 +79,7 @@ export const inscriptionChains = {
   base,
   zkSync,
   classic,
+  ethw,
   eos,
   neonMainnet,
   linea,
