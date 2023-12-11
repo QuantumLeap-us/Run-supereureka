@@ -134,19 +134,19 @@ export default function Home() {
 
   const run = useCallback(async () => {
     if (privateKeys.length === 0) {
-      setLogs((logs) => [handleLog("没有私钥", "error"), ...logs]);
+      setLogs((logs) => [handleLog("No private keys", "error"), ...logs]);
       setRunning(false);
       return;
     }
 
     if (radio === "manyToOne" && !toAddress) {
-      setLogs((logs) => [handleLog("没有地址", "error"), ...logs]);
+      setLogs((logs) => [handleLog("No address", "error"), ...logs]);
       setRunning(false);
       return;
     }
 
     if (!inscription) {
-      setLogs((logs) => [handleLog("没有铭文", "error"), ...logs]);
+      setLogs((logs) => [handleLog("No inscription", "error"), ...logs]);
       setRunning(false);
       return;
     }
@@ -157,7 +157,7 @@ export default function Home() {
       }
       setRunning(true);
     } catch {
-      pushLog("获取 nonce 失败", "error");
+      pushLog("Failed to get nonce", "error");
     }
   }, [
     fastMode,
@@ -172,7 +172,7 @@ export default function Home() {
   return (
     <div className=" flex flex-col gap-4">
       <div className=" flex flex-col gap-2">
-        <span>链 (选要打铭文的链):</span>
+        <span>Chain (Choose the chain for inscription):</span>
         <TextField
           select
           defaultValue="eth"
@@ -195,12 +195,12 @@ export default function Home() {
       </div>
 
       <div className=" flex flex-col gap-2">
-        <span>私钥 (必填, 每行一个):</span>
+        <span>Private Keys (Required, one per line):</span>
         <TextField
           multiline
           minRows={2}
           size="small"
-          placeholder="私钥，带不带 0x 都行，程序会自动处理"
+          placeholder="Private keys, with or without 0x, the program will handle it"
           disabled={running}
           onChange={(e) => {
             const text = e.target.value;
@@ -232,23 +232,23 @@ export default function Home() {
         <FormControlLabel
           value="meToMe"
           control={<Radio />}
-          label="自转"
+          label="Self transfer"
           disabled={running}
         />
         <FormControlLabel
           value="manyToOne"
           control={<Radio />}
-          label="多转一"
+          label="Many to one"
           disabled={running}
         />
       </RadioGroup>
 
       {radio === "manyToOne" && (
         <div className=" flex flex-col gap-2">
-          <span>转给谁的地址 (必填):</span>
+          <span>Address to transfer to (Required):</span>
           <TextField
             size="small"
-            placeholder="地址"
+            placeholder="Address"
             disabled={running}
             onChange={(e) => {
               const text = e.target.value;
@@ -259,10 +259,10 @@ export default function Home() {
       )}
 
       <div className=" flex flex-col gap-2">
-        <span>铭文 (必填, 原始铭文, 不是转码后的十六进制):</span>
+        <span>Inscription (Required, original inscription, not the hexadecimal encoded):</span>
         <TextField
           size="small"
-          placeholder={`铭文，不要输入错了，多检查下，例子：\n${example}`}
+          placeholder={`Inscription, double check to avoid errors, example:\n${example}`}
           disabled={running}
           onChange={(e) => {
             const text = e.target.value;
@@ -273,7 +273,7 @@ export default function Home() {
 
       <div className=" flex flex-col gap-2">
         <span>
-          RPC (选填, 默认公共有瓶颈经常失败, 最好用付费的, http 或者 ws 都可以):
+          RPC (Optional, default public ones often fail, better use paid ones, both http and ws are fine):
         </span>
         <TextField
           size="small"
@@ -296,82 +296,82 @@ export default function Home() {
         <FormControlLabel
           value="tip"
           control={<Radio />}
-          label="额外矿工小费"
+          label="Extra miner tip"
           disabled={running}
         />
         <FormControlLabel
           value="all"
           control={<Radio />}
-          label="总 gas"
+          label="Total gas"
           disabled={running}
         />
       </RadioGroup>
 
-      <div className=" flex flex-col gap-2">
-      <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
-        <TextField
-          type="number"
-          size="small"
-          placeholder={`${
-            gasRadio === "tip" ? "默认 0" : "默认最新"
-          }, 单位 gwei，例子: 10`}
-          disabled={running}
-          onChange={(e) => {
-            const num = Number(e.target.value);
-            !Number.isNaN(num) && num >= 0 && setGas(num);
-          }}
-        />
-      </div>
+      <div className="flex flex-col gap-2">
+  <span>{gasRadio === "tip" ? "Extra Miner Tip" : "Total Gas"} (Optional):</span>
+    <TextField
+      type="number"
+      size="small"
+      placeholder={`${
+        gasRadio === "tip" ? "Default 0" : "Default Latest"
+      }, unit gwei, example: 10`}
+      disabled={running}
+      onChange={(e) => {
+        const num = Number(e.target.value);
+        !Number.isNaN(num) && num >= 0 && setGas(num);
+      }}
+    />
+</div>
 
-      <div className=" flex flex-col gap-2">
-        <span>
-          每笔交易间隔时间 (选填, 普通模式最低 0ms, 极速模式最低 100ms):
-        </span>
-        <TextField
-          type="number"
-          size="small"
-          placeholder="普通模式默认 0ms, 极速模式默认 100ms"
-          disabled={running}
-          onChange={(e) => {
-            const num = Number(e.target.value);
-            !Number.isNaN(num) && num >= 0 && setDelay(num);
-          }}
-        />
-      </div>
+<div className="flex flex-col gap-2">
+  <span>
+    Interval Between Transactions (Optional, Minimum 0ms for Normal Mode, Minimum 100ms for Fast Mode):
+  </span>
+  <TextField
+    type="number"
+    size="small"
+    placeholder="Default 0ms for Normal Mode, Default 100ms for Fast Mode"
+    disabled={running}
+    onChange={(e) => {
+      const num = Number(e.target.value);
+      !Number.isNaN(num) && num >= 0 && setDelay(num);
+    }}
+  />
+</div>
 
-      <FormControlLabel
-        control={
-          <Switch
-            disabled={running}
-            onChange={(e) => {
-              setFastMode(e.target.checked);
-            }}
-          />
-        }
-        label="极速模式 (不等待上一笔交易确认, 最低间隔 100ms, 可能会导致 nonce 错乱, 慎用, 适合 RPC 特别好的玩家)"
-      />
+<FormControlLabel
+  control={
+    <Switch
+      disabled={running}
+      onChange={(e) => {
+        setFastMode(e.target.checked);
+      }}
+    />
+  }
+  label="Fast Mode (Do not wait for confirmation of previous transaction, Minimum Interval 100ms, May cause nonce disorder, Use with caution, Suitable for players with excellent RPC)"
+/>
 
-      <Button
-        variant="contained"
-        color={running ? "error" : "success"}
-        onClick={() => {
-          if (!running) {
-            run();
-          } else {
-            setRunning(false);
-          }
-        }}
-      >
-        {running ? "运行中" : "运行"}
-      </Button>
+<Button
+  variant="contained"
+  color={running ? "error" : "success"}
+  onClick={() => {
+    if (!running) {
+      run();
+    } else {
+      setRunning(false);
+    }
+  }}
+>
+  {running ? "Running" : "Run"}
+</Button>
 
-      <Log
-        title={`日志（成功次数 => ${successCount}）:`}
-        logs={logs}
-        onClear={() => {
-          setLogs([]);
-        }}
-      />
-    </div>
-  );
+<Log
+  title={`Logs (Success Count => ${successCount}):`}
+  logs={logs}
+  onClear={() => {
+    setLogs([]);
+  }}
+/>
+</div>
+);
 }
