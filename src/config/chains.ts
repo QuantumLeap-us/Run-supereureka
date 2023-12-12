@@ -93,7 +93,7 @@ export const inscriptionChains = {
   eth: mainnet,
   bsc,
   opBNB,
-  // okc,
+  okc,
   polygon,
   fantom,
   avalanche,
