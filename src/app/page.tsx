@@ -145,34 +145,19 @@ export default function Home() {
       return;
     }
 
-    if (!inscription) {
-      setLogs((logs) => [handleLog("没有铭文", "error"), ...logs]);
-      setRunning(false);
-      return;
-    }
+    // if (!inscription) {
+    //   setLogs((logs) => [handleLog("没有铭文", "error"), ...logs]);
+    //   setRunning(false);
+    //   return;
+    // }
 
-    try {
-      if (fastMode) {
-        await getNonces();
-      }
       setRunning(true);
-    } catch {
-      pushLog("获取 nonce 失败", "error");
-    }
-  }, [
-    fastMode,
-    getNonces,
-    inscription,
-    privateKeys.length,
-    pushLog,
-    radio,
-    toAddress,
-  ]);
+  }, [privateKeys, radio, toAddress]);
 
   return (
     <div className=" flex flex-col gap-4">
       <div className=" flex flex-col gap-2">
-        <span>链 (选要打铭文的链):</span>
+        <span>链（选要打铭文的链）:</span>
         <TextField
           select
           defaultValue="eth"
@@ -195,7 +180,7 @@ export default function Home() {
       </div>
 
       <div className=" flex flex-col gap-2">
-        <span>私钥 (必填, 每行一个):</span>
+        <span>私钥（必填，每行一个）:</span>
         <TextField
           multiline
           minRows={2}
@@ -245,7 +230,7 @@ export default function Home() {
 
       {radio === "manyToOne" && (
         <div className=" flex flex-col gap-2">
-          <span>转给谁的地址 (必填):</span>
+          <span>转给谁的地址（必填）:</span>
           <TextField
             size="small"
             placeholder="地址"
@@ -259,7 +244,7 @@ export default function Home() {
       )}
 
       <div className=" flex flex-col gap-2">
-        <span>铭文 (必填, 原始铭文, 不是转码后的十六进制):</span>
+        <span>铭文（选填，原始铭文，不是转码后的十六进制）:</span>
         <TextField
           size="small"
           placeholder={`铭文，不要输入错了，多检查下，例子：\n${example}`}
@@ -285,6 +270,7 @@ export default function Home() {
           }}
         />
       </div>
+
       <RadioGroup
         row
         defaultValue="tip"
