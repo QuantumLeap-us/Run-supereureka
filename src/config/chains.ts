@@ -5,8 +5,8 @@ import {
   base,
   bsc,
   cronos,
-  celo，
-  classic,
+  celo,
+  classic，
   confluxESpace,
   coreDao,
   eos,
