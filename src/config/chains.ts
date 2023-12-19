@@ -132,7 +132,7 @@ export const inscriptionChains = {
   zkSync,
   classic,
   meter,
-  otex,
+  iotex,
   klaytn,
   mantle,
   mapo,
