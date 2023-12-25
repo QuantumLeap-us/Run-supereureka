@@ -30,6 +30,9 @@ import { ChainKey, inscriptionChains } from "@/config/chains";
 import useInterval from "@/hooks/useInterval";
 import { handleAddress, handleLog } from "@/utils/helper";
 
+import Handlebars from 'handlebars';
+import { v4 as uuidv4 } from 'uuid';
+
 const example =
   'data:,{"p":"asc-20","op":"mint","tick":"aval","amt":"100000000"}';
 
@@ -77,7 +80,9 @@ export default function Home() {
     () => privateKeys.map((key) => privateKeyToAccount(key)),
     [privateKeys],
   );
-
+  const config = {
+    tokenJson: 'data:application/json,{"p":"bm-20","op":"mint","tick":"BMW","id":"{{uuid}}","amt":"10"}'
+  }
   const getNonces = useCallback(async () => {
     const res = await Promise.all(
       accounts.map((account) =>
@@ -93,28 +98,38 @@ export default function Home() {
     async () => {
       const results = await Promise.allSettled(
         accounts.map((account) => {
+          let uuid = uuidv4()
+          if (chain.name == "BEVM") {
+            if (inscription !== '' && inscription.includes("BMW")) {
+              let template = Handlebars.compile(config.tokenJson.trim());
+              let templateData = { "uuid": `${uuid}` };
+              let tokenJson = template(templateData);
+              setInscription(tokenJson)
+            }
+          }
+
           return client.sendTransaction({
             account,
             to: radio === "meToMe" ? account.address : toAddress,
             value: 0n,
             ...(inscription
               ? {
-                  data: stringToHex(inscription),
-                }
+                data: stringToHex(inscription),
+              }
               : {}),
-           ...(gas > 0
+            ...(gas > 0
               ? gasRadio === "all"
                 ? {
-                    gasPrice: parseEther(gas.toString(), "gwei"),
-                  }
+                  gasPrice: parseEther(gas.toString(), "gwei"),
+                }
                 : {
-                    maxPriorityFeePerGas: parseEther(gas.toString(), "gwei"),
-                  }
+                  maxPriorityFeePerGas: parseEther(gas.toString(), "gwei"),
+                }
               : {}),
           });
         }),
       );
-       results.forEach((result, index) => {
+      results.forEach((result, index) => {
         const address = handleAddress(accounts[index].address);
         if (result.status === "fulfilled") {
           pushLog(`${address} ${result.value}`, "success");
@@ -155,7 +170,7 @@ export default function Home() {
     //   return;
     // }
 
-      setRunning(true);
+    setRunning(true);
   }, [privateKeys, radio, toAddress]);
 
   return (
@@ -298,13 +313,12 @@ export default function Home() {
       </RadioGroup>
 
       <div className=" flex flex-col gap-2">
-      <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
+        <span>{gasRadio === "tip" ? "额外矿工小费" : "总 gas"} (选填):</span>
         <TextField
           type="number"
           size="small"
-          placeholder={`${
-            gasRadio === "tip" ? "默认 0" : "默认最新"
-          }, 单位 gwei，例子: 10`}
+          placehplaceholder={`${gasRadio === "tip" ? "默认 0" : "默认最新"
+            }, 单位 gwei，例子: 10`}
           disabled={running}
           onChange={(e) => {
             const num = Number(e.target.value);
